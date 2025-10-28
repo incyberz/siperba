@@ -25,8 +25,8 @@ if (isset($_POST['login'])) {
 <div class="d-flex justify-content-center align-items-center vh-100 bg-light">
   <div class="card shadow-lg border-0" style="width: 360px;">
     <div class="card-body">
-      <h4 class="text-center mb-3 fw-bold text-danger">📁 SiPerba</h4>
-      <p class="text-center text-muted mb-4">Sistem Pengumpulan Berkas</p>
+      <h4 class="text-center mb-3 fw-bold text-<?= $tema ?>">📁 <?= $nama_app ?></h4>
+      <p class="text-center text-muted mb-4"><?= $nama_aplikasi ?></p>
 
       <form method="POST">
         <div class="mb-3">
@@ -39,7 +39,7 @@ if (isset($_POST['login'])) {
           <input type="password" name="password" class="form-control" required>
         </div>
 
-        <button type="submit" name="login" class="btn btn-danger w-100">Login</button>
+        <button type="submit" name="login" class="btn btn-<?= $tema ?> w-100">Login</button>
       </form>
     </div>
   </div>

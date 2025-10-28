@@ -54,8 +54,8 @@ if (isset($_GET['reset'])) {
 // Tambah user baru
 if (isset($_POST['simpan'])) {
   $username = trim($_POST['username']);
-  $password = md5($_POST['password']);
-  $nama     = trim($_POST['nama']);
+  $password = md5($_POST['username']);
+  $nama     = ucwords(trim($_POST['nama']));
   $whatsapp = trim($_POST['whatsapp']);
   $role     = $_POST['role'] ?? 'anggota';
 
@@ -93,42 +93,7 @@ $data = mysqli_query($conn, "SELECT * FROM tb_user ORDER BY role DESC, nama ASC"
     </button>
   </div>
 
-  <div class="collapse" id="formTambahUser">
-    <div class="card-body border-bottom">
-      <form method="POST">
-        <div class="row">
-          <div class="col-md-3 mb-3">
-            <label class="form-label">Username</label>
-            <input type="text" name="username" class="form-control" required>
-          </div>
-          <div class="col-md-3 mb-3">
-            <label class="form-label">Password</label>
-            <input type="text" name="password" class="form-control" required>
-          </div>
-          <div class="col-md-3 mb-3">
-            <label class="form-label">Nama</label>
-            <input type="text" name="nama" class="form-control" required>
-          </div>
-          <div class="col-md-3 mb-3">
-            <label class="form-label">No. WhatsApp</label>
-            <input type="text" name="whatsapp" class="form-control" placeholder="62xxxx" required>
-          </div>
-        </div>
-        <div class="row">
-          <div class="col-md-3 mb-3">
-            <label class="form-label">Role</label>
-            <select name="role" class="form-select">
-              <option value="anggota">Anggota</option>
-              <option value="admin">Admin</option>
-            </select>
-          </div>
-        </div>
-        <button type="submit" name="simpan" class="btn btn-success">
-          <i class="bi bi-save"></i> Simpan
-        </button>
-      </form>
-    </div>
-  </div>
+  <?php include 'user_tambah.php'; ?>
 
   <div class="card-body">
     <div class="table-responsive">
@@ -183,11 +148,11 @@ $data = mysqli_query($conn, "SELECT * FROM tb_user ORDER BY role DESC, nama ASC"
 
 
                   <?php
-                  $isDefaultPass = ($row['password'] === md5($row['username']));
+                  $thisDefaultPass = ($row['password'] === md5($row['username']));
                   ?>
 
                   <?php if ($row['username'] != $_SESSION['username']): ?>
-                    <?php if ($isDefaultPass): ?>
+                    <?php if ($thisDefaultPass): ?>
                       <!-- Password masih default, tampilkan ikon kunci abu -->
                       <span class="btn btn-sm btn-secondary" onclick="alert(`Password untuk user ini sudah sama dengan username.`)">
                         <i class="bi bi-lock"></i>

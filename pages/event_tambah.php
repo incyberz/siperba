@@ -1,4 +1,27 @@
 <?php
+$mode = $_GET['mode'] ?? 'tambah';
+if (!($mode == 'tambah' || $mode == 'ubah')) die('Hanya diperbolehkan mode tambah dan ubah.');
+
+$event_id = intval($_GET['event_id'] ?? '');
+$event = [];
+$Tambah = 'Tambah Event Baru';
+$Simpan = 'Simpan';
+$ditambahkan = 'ditambahkan';
+if ($mode == 'ubah') {
+  $Tambah = "Ubah Event: id. $event_id";
+  $Simpan = 'Update';
+  $ditambahkan = 'diperbarui';
+  if (!$event_id || $event_id < 1) die('Invalid event_id pada mode ubah');
+  // Ambil data event dari DB
+  $result = mysqli_query($conn, "SELECT * FROM tb_event WHERE id = $event_id");
+  if (!$result || mysqli_num_rows($result) === 0) die('Event tidak ditemukan');
+  $event = mysqli_fetch_assoc($result);
+}
+
+// fill with config ekstensi default
+$event['ekstensi_files'] = $event['ekstensi_files'] ?? $ekstensi_default;
+
+
 // pastikan hanya admin yang bisa akses
 if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
   echo "<script>
@@ -11,7 +34,9 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
   exit;
 }
 
-if (isset($_POST['simpan'])) {
+if (isset($_POST['btn_simpan'])) {
+  $mode = $_POST['btn_simpan'];
+  if (!($mode == 'tambah' || $mode == 'ubah')) die('Hanya diperbolehkan mode tambah dan ubah.');
 
   // ambil dan amankan input
   $nama_event = mysqli_real_escape_string($conn, trim($_POST['nama_event']));
@@ -57,26 +82,38 @@ if (isset($_POST['simpan'])) {
     // insert ke tb_event
     $nama_event_q = mysqli_real_escape_string($conn, $nama_event);
     $deskripsi_q  = mysqli_real_escape_string($conn, $deskripsi);
+    $ekstensi_files  = preg_replace('/[^a-z,]/', '', strtolower($_POST['ekstensi_files']));
 
     $deskripsi_q = $deskripsi_q ? "'$deskripsi_q'" : 'NULL';
     $tanggal_mulai = $tanggal_mulai ? "'$tanggal_mulai'" : 'NULL';
     $tanggal_selesai = $tanggal_selesai ? "'$tanggal_mulai'" : 'NULL';
 
     $sql = "INSERT INTO tb_event (
+    id,
     nama_event, 
     deskripsi, 
     tanggal_mulai, 
     tanggal_selesai, 
     batas_pengumpulan, 
+    ekstensi_files, 
     created_at
     ) VALUES (
+    '$event_id', 
     '$nama_event_q', 
     $deskripsi_q, 
     $tanggal_mulai, 
     $tanggal_selesai, 
     '$batas_pengumpulan', 
+    '$ekstensi_files', 
     NOW()
-    )";
+    ) ON DUPLICATE KEY UPDATE 
+      nama_event = '$nama_event_q', 
+      deskripsi = $deskripsi_q, 
+      tanggal_mulai = $tanggal_mulai, 
+      tanggal_selesai = $tanggal_selesai, 
+      batas_pengumpulan = '$batas_pengumpulan',
+      ekstensi_files = '$ekstensi_files'
+    ";
 
     $simpan = mysqli_query($conn, $sql);
 
@@ -91,7 +128,7 @@ if (isset($_POST['simpan'])) {
         Swal.fire({
           icon: 'success',
           title: 'Berhasil!',
-          text: 'Event berhasil ditambahkan.'
+          text: 'Event berhasil $ditambahkan.'
         }).then(() => window.location='?dashboard');
       </script>";
     } else {
@@ -109,43 +146,95 @@ if (isset($_POST['simpan'])) {
 ?>
 
 <div class="card shadow">
-  <div class="card-header bg-danger text-white">
-    <h5 class="mb-0">Tambah Event Baru</h5>
+  <div class="card-header bg-<?= $tema ?> text-white">
+    <h5 class="mb-0"><?= $Tambah ?></h5>
   </div>
   <div class="card-body">
     <form method="POST" id="formEvent">
+      <input type="hidden" name="event_id" value="<?= $event_id ?>">
       <div class="mb-3">
         <label class="form-label">Nama Event <span class="text-danger">*</span></label>
-        <input type="text" name="nama_event" class="form-control" required>
+        <input type="text" name="nama_event" class="form-control" required value="<?= $event['nama_event'] ?? '' ?>">
       </div>
 
       <div class="mb-3">
         <label class="form-label">Deskripsi</label>
-        <textarea name="deskripsi" class="form-control" rows="3"></textarea>
+        <textarea name="deskripsi" class="form-control" rows="3"><?= $event['deskripsi'] ?? '' ?></textarea>
       </div>
+
+      <div class="mb-3">
+        <label class="form-label">Ekstensi yang diperbolehkan <b class="text-danger">*</b> :</label>
+        <input type="text" name="ekstensi_files" class="form-control" id="ekstensi_files" required
+          value="<?= $event['ekstensi_files'] ?>" readonly>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Pilih ekstensi:</label><br>
+        <?php
+        $all_ext = ['zip', 'docx', 'xlsx', 'pptx', 'pdf',  'rar'];
+        $selected_ext = isset($event['ekstensi_files']) ? explode(',', $event['ekstensi_files']) : [];
+        $first_ext = null;
+        foreach ($all_ext as $ext) {
+          $checked = (in_array($ext, $selected_ext) || !$first_ext) ? 'checked' : '';
+          $first_ext = $first_ext ?? $ext;
+          echo "
+            <div class='form-check form-check-inline'>
+              <input class='form-check-input cb_ext' type='checkbox' id='ext--$ext' value='$ext' $checked>
+              <label class='form-check-label' for='ext_$ext'>$ext</label>
+            </div>
+          ";
+        }
+        ?>
+        <small class="d-block text-muted">Pilih zip/rar jika berkas peserta lebih dari satu dokumen.</small>
+      </div>
+
+
+
+      <script>
+        $(function() {
+
+          $('.cb_ext').click(function() {
+            let exts = [];
+            $('.cb_ext').each((index, e) => {
+              if (e.checked) exts.push(e.id.split('--')[1]);
+            })
+            if (exts.length) {
+              $('#ekstensi_files').val(exts.join(','))
+            } else {
+              // $('#ekstensi_files').val('')
+              alert('Minimal terceklis satu ekstensi');
+              $(this).prop('checked', true);
+            }
+          })
+        });
+      </script>
+
+
+      <div class="mb-3">
+        <label class="form-label">Batas Pengumpulan <span class="text-danger">*</span></label>
+        <input type="datetime-local" name="batas_pengumpulan" class="form-control" id="batas_pengumpulan" required value="<?= $event['batas_pengumpulan'] ?? '' ?>">
+        <div class="form-text text-danger">Wajib diisi — Tanggal dan Jam — peserta tidak bisa upload setelah melewati batas ini.</div>
+      </div>
+
 
       <div class="row">
         <div class="col-md-6 mb-3">
           <label class="form-label">Tanggal Mulai</label>
-          <input type="datetime-local" name="tanggal_mulai" class="form-control" id="tanggal_mulai">
+          <input type="datetime-local" name="tanggal_mulai" class="form-control" id="tanggal_mulai" value="<?= $event['tanggal_mulai'] ?? '' ?>">
           <div class="form-text">Opsional — jika kosong akan otomatis terisi dengan waktu sekarang.</div>
         </div>
 
         <div class="col-md-6 mb-3">
           <label class="form-label">Tanggal Selesai</label>
-          <input type="datetime-local" name="tanggal_selesai" class="form-control" id="tanggal_selesai">
+          <input type="datetime-local" name="tanggal_selesai" class="form-control" id="tanggal_selesai" value="<?= $event['tanggal_selesai'] ?? '' ?>">
           <div class="form-text">Opsional — jika kosong akan disamakan dengan Batas Pengumpulan.</div>
         </div>
       </div>
 
-      <div class="mb-3">
-        <label class="form-label">Batas Pengumpulan <span class="text-danger">*</span></label>
-        <input type="datetime-local" name="batas_pengumpulan" class="form-control" id="batas_pengumpulan" required>
-        <div class="form-text text-danger">Wajib diisi — peserta tidak bisa upload setelah melewati batas ini (nanti bisa dicek di logic upload).</div>
-      </div>
 
-      <button type="submit" name="simpan" class="btn btn-success">
-        <i class="bi bi-save"></i> Simpan
+
+      <button type="submit" name="btn_simpan" value="<?= $mode ?>" class="btn btn-success">
+        <i class="bi bi-save"></i> <?= $Simpan ?>
       </button>
       <a href="?dashboard" class="btn btn-secondary">Batal</a>
     </form>

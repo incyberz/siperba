@@ -3,3 +3,9 @@ assets/*.css
 assets/*.js
 assets/fonts/
 
+berkas/
+
+*.zip
+*.rar
+*.docx
+*.xlsx
