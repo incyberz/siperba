@@ -5,6 +5,8 @@ include 'config.php';
 
 
 if (file_exists('config-febi.php')) include 'config-febi.php';
+$NAMA_APP = ucwords($nama_app);
+$isDefaultPass = '';
 
 // Ambil nama page dari query string
 $page = '';

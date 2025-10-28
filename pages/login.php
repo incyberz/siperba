@@ -36,7 +36,12 @@ if (isset($_POST['login'])) {
 
         <div class="mb-3">
           <label class="form-label">Password</label>
-          <input type="password" name="password" class="form-control" required>
+          <input type="password" name="password" class="form-control mb-1" required>
+          <?php
+          $text_wa = urlencode("*REQUEST RESET PASSWORD*\n\nYth. Admin $NAMA_APP\n\nSaya lupa password pada Aplikasi: $nama_app. Mohon bantuannya untuk reset password. Terimakasih.");
+          $href_wa = "https://api.whatsapp.com/send?phone=$whatsapp_admin&text=$text_wa";
+          ?>
+          <small class="text-muted">jika lupa password, <a target="_blank" href="<?= $href_wa ?>">hubungi admin</a> untuk reset.</small>
         </div>
 
         <button type="submit" name="login" class="btn btn-<?= $tema ?> w-100">Login</button>

@@ -1,3 +1,27 @@
+<?php
+if (isset($_POST['btn_hapus_dokumen'])) {
+  $pengumpulan_id = intval($_POST['btn_hapus_dokumen']);
+
+  // ambil data file dari database
+  $q = mysqli_query($conn, "SELECT nama_file FROM tb_pengumpulan WHERE id=$pengumpulan_id");
+  if ($row = mysqli_fetch_assoc($q)) {
+    $nama_file = $row['nama_file'];
+    $path = "berkas/$nama_file";
+
+    // hapus file dari folder jika ada
+    if (file_exists($path)) {
+      if (!unlink($path)) die('Tidak bisa menghapus file lama.');
+    }
+
+    // hapus data di database
+    mysqli_query($conn, "DELETE FROM tb_pengumpulan WHERE id=$pengumpulan_id");
+  }
+
+  jsurl(); // self redirect dg JS
+}
+
+?>
+
 <div class="d-flex justify-content-between align-items-center mb-2">
   <h5 class="fw-semibold mb-0">📁 Daftar Event Aktif</h5>
   <div>
@@ -7,9 +31,15 @@
 
 <?php
 $no = 0;
-$events = mysqli_query($conn, "SELECT * 
-FROM tb_event 
-ORDER BY batas_pengumpulan DESC");
+$events = mysqli_query($conn, "SELECT a.*,
+(
+  SELECT COUNT(1) FROM tb_peserta 
+  WHERE event_id=a.id) total_peserta,
+(
+  SELECT COUNT(1) FROM tb_pengumpulan 
+  WHERE event_id=a.id) total_berkas
+FROM tb_event a
+ORDER BY a.batas_pengumpulan DESC");
 $tr = "<tr><td colspan='100%' class='text-center text-muted'>Belum ada event.</td></tr>";
 
 if (mysqli_num_rows($events) > 0) {
@@ -20,11 +50,11 @@ if (mysqli_num_rows($events) > 0) {
 
     // Hitung peserta total
     $event_id = $event['id'];
-    $total_peserta = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM tb_peserta WHERE event_id=$event[id]"));
+    $total_peserta = $event['total_peserta'];
 
     // Hitung peserta yang sudah mengumpulkan
     $query_sudah = mysqli_query($conn, "SELECT 
-      a.id as id_pengumpulan,
+      a.id as pengumpulan_id,
       a.*,
       c.*  
       FROM tb_pengumpulan a
@@ -76,6 +106,57 @@ if (mysqli_num_rows($events) > 0) {
         WHERE a.event_id = $event_id AND c.id IS NULL
         ORDER BY b.nama
       ");
+
+
+      $s = "SELECT 
+      a.id as id_peserta,
+      a.*, 
+      b.*,
+      (SELECT 1 FROM tb_pengumpulan WHERE event_id=$event_id AND peserta_id=a.id) punya_berkas
+      FROM tb_peserta a 
+      JOIN tb_user b ON a.user_id=b.id 
+      WHERE a.event_id = $event_id
+      ";
+      $q = mysqli_query($conn, $s) or die(mysqli_error($conn));
+
+      $j = 0;
+      while ($d = mysqli_fetch_assoc($q)) {
+
+        $j++;
+        $nama = htmlspecialchars($d['nama']);
+        $whatsapp = htmlspecialchars($d['whatsapp']);
+
+        $eta = diffForHumans($event['batas_pengumpulan']);
+        $batas_pengumpulan = date('d M Y H:i', strtotime($event['batas_pengumpulan'])) . " ($eta)";
+        $timestamp = date('M d, Y, H:i:s');
+        $nama_peserta = ucwords(strtolower($nama));
+
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https://" : "http://";
+        $host = $_SERVER['HTTP_HOST'];
+        $path = rtrim(dirname($_SERVER['PHP_SELF']), '/\\'); // ambil folder tanpa file
+
+        $link_login = $protocol . $host . $path . '/';
+
+        $text_wa = urlencode("============================\n*NOTIF $NAMA_APP*\n============================\nYth. $nama_peserta \n\nMohon segera mengumpulkan Berkas via $NAMA_APP ($nama_aplikasi) untuk event:\n - *$event[nama_event]*\n - paling lambat *$batas_pengumpulan*\n\nLink login: $link_login\n_username_: $d[username]\n_password_: (password Anda) atau sama dengan username\n\nTerimakasih.\n\n[Admin $NAMA_APP, $timestamp]");
+        $wa_link = "https://api.whatsapp.com/send?phone=$whatsapp&text=$text_wa";
+
+
+        if (!$d['punya_berkas']) {
+          $list_belum .= "
+            <div class='d-flex justify-content-between align-items-center py-1 border-bottom'>
+                <div>$j. $d[nama]</div>
+                <div>
+                    <a href='$wa_link' target='_blank' class='btn btn-sm btn-danger'>
+                        <i class='bi bi-whatsapp'></i> Z $d[punya_berkas]
+                    </a>
+                </div>
+            </div>
+          ";
+        }
+      }
+
+
+
       $j = 0;
       while ($row = mysqli_fetch_assoc($query_belum)) {
         $j++;
@@ -129,9 +210,6 @@ if (mysqli_num_rows($events) > 0) {
         $path_file = "berkas/$nama_file";
 
         if (!empty($nama_file) && file_exists($path_file)) {
-          $icon_dokumen = ''; // sesuai ekstensi
-          $link_dokumen = "<a target='_blank' href='$path_file'>$icon_dokumen</a>";
-
           $ext = strtolower(pathinfo($nama_file, PATHINFO_EXTENSION));
 
           // mapping ekstensi → icon Bootstrap
@@ -152,7 +230,12 @@ if (mysqli_num_rows($events) > 0) {
           $icon_class = $icon_map[$ext] ?? 'bi-file-earmark';
 
           // buat link dokumen dengan ikon
-          $link_dokumen = "<a target='_blank' href='$path_file'><i class='bi $icon_class'></i></a>";
+          $link_dokumen = "
+            <a class='btn btn-sm btn-outline-success' target='_blank' href='$path_file'><i class='bi $icon_class'></i></a>
+            <form method=post class='d-inline'>
+              <button class='btn btn-sm btn-danger' onclick='return confirm(`Yakin hapus dokumen ini?`)' name=btn_hapus_dokumen value='$row[pengumpulan_id]'><i class='bi bi-trash'></i></button>
+            </form>
+          ";
         } else {
           $link_dokumen = "<span class='text-danger'><i class='bi bi-exclamation-triangle-fill'></i> Berkas Hilang</span>";
         }
@@ -160,13 +243,17 @@ if (mysqli_num_rows($events) > 0) {
 
         $list_sudah .= "
           <div class='py-1 border-bottom'>
-            <div class=row>
-              <div class=col-8>$j. $nama</div>
-              <div class=col-2>$link_dokumen</div>
-              <div class=col-2>
+            <div class='d-flex justify-content-between'>
+              <div>$j. $nama</div>
+              <div class='d-flex gap-1'>
+                <div>
+                  $link_dokumen
+                </div>
+                <div>
                   <a href='$wa_link' target='_blank' class='btn btn-sm btn-success'>
                       <i class='bi bi-whatsapp'></i>
                   </a>
+                </div>
               </div>
             </div>
           </div>

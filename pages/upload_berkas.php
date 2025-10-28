@@ -53,8 +53,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['berkas'], $_GET['eve
     // simpan ke tb_pengumpulan
     $nama_dokumen = mysqli_real_escape_string($conn, $file['name']);
     $nama_file = mysqli_real_escape_string($conn, $new_filename);
-    $sql = "INSERT INTO tb_pengumpulan (peserta_id, nama_dokumen, nama_file, created_at)
-                VALUES ($peserta_id, '$nama_dokumen', '$nama_file', NOW())";
+    $sql = "INSERT INTO tb_pengumpulan (
+      event_id, 
+      peserta_id, 
+      nama_dokumen, 
+      nama_file, 
+      created_at
+    ) VALUES (
+      $event_id, 
+      $peserta_id, 
+      '$nama_dokumen', 
+      '$nama_file', 
+      NOW()
+    )";
     mysqli_query($conn, $sql);
 
     echo "<script>
