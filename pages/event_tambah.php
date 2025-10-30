@@ -154,7 +154,7 @@ if (isset($_POST['btn_simpan'])) {
       <input type="hidden" name="event_id" value="<?= $event_id ?>">
       <div class="mb-3">
         <label class="form-label">Nama Event <span class="text-danger">*</span></label>
-        <input type="text" name="nama_event" class="form-control" required value="<?= $event['nama_event'] ?? '' ?>">
+        <input placeholder="misal: Pengumpulan Berkas Soal UTS 2025/2026 Ganjil" type="text" name="nama_event" class="form-control" required value="<?= $event['nama_event'] ?? '' ?>">
       </div>
 
       <div class="mb-3">

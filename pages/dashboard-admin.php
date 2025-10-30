@@ -4,4 +4,4 @@
 
 <hr class="my-4">
 
-<?php include 'daftar-event-aktif.php'; ?>
+<?php include 'daftar-event-aktif-admin.php'; ?>

@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['berkas'], $_GET['eve
 
   if (move_uploaded_file($file['tmp_name'], $target_path)) {
     // simpan ke tb_pengumpulan
-    $nama_dokumen = mysqli_real_escape_string($conn, $file['name']);
+    $nama_dokumen = ucwords(mysqli_real_escape_string($conn, $_POST['nama_dokumen'] ?? $file['name']));
     $nama_file = mysqli_real_escape_string($conn, $new_filename);
     $sql = "INSERT INTO tb_pengumpulan (
       event_id, 
@@ -61,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['berkas'], $_GET['eve
       created_at
     ) VALUES (
       $event_id, 
-      $peserta_id, 
+      '$peserta_id', 
       '$nama_dokumen', 
       '$nama_file', 
       NOW()

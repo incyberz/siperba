@@ -25,11 +25,11 @@ $peserta_res = mysqli_query($conn, $sql_peserta);
 
 <div class="card shadow-sm">
   <div class="card-header bg-secondary text-white">
-    Event Lampau | Riwayat Pengumpulan Berkas
+    Event Lampau | Riwayat Pengumpulan
   </div>
   <div class="card-body">
     <?php if (mysqli_num_rows($peserta_res) == 0): ?>
-      <div class="alert alert-info">Anda belum terdaftar di event manapun.</div>
+      <div class="alert alert-info">Belum ada riwayat.</div>
     <?php else: ?>
 
 
@@ -38,7 +38,7 @@ $peserta_res = mysqli_query($conn, $sql_peserta);
           $isClosed = strtotime($row['batas_pengumpulan']) - strtotime('now') < 0;
           $peserta_id = $row['peserta_id'];
           // Cek pengumpulan
-          $pengumpulan_res = mysqli_query($conn, "SELECT * FROM tb_pengumpulan WHERE peserta_id = $peserta_id");
+          $pengumpulan_res = mysqli_query($conn, "SELECT * FROM tb_pengumpulan WHERE peserta_id = '$peserta_id'");
           $file_link = '';
           if (mysqli_num_rows($pengumpulan_res) > 0) {
             $pengumpulan = mysqli_fetch_assoc($pengumpulan_res);

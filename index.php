@@ -61,6 +61,7 @@ if (isset($_SESSION['username'])) {
 
   <div class="container mt-4">
     <?php
+    $page = $page ? $page : "dashboard-$role";
     $file = "pages/$page.php";
     if (file_exists($file)) {
       include $file;
@@ -78,6 +79,9 @@ if (isset($_SESSION['username'])) {
       <?php endif; ?>
     });
   </script>
+  <footer>
+    <div class="text-muted text-center py-5 small">Made with ♥️ Coding Albaiti DevTeam ©️2025</div>
+  </footer>
 </body>
 
 </html>

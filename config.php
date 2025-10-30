@@ -18,14 +18,18 @@ $ekstensi_default = 'zip,docx'; // untuk create event pemberkasan
 
 
 # ============================================================
-# DILARANG MENGUBAH CODE INI
+# DILARANG MENGUBAH CODE INI KEBAWAH
 # ============================================================
 $timestamp = date('d-M-Y H:i'); // pada footer pesan
 $today = date('Y-m-d');
 $now = date('Y-m-d H:i:s');
-
 $NAMA_APP = strtoupper($nama_app); // pada Header 
+
+# ============================================================
+# DEVELOPER
+# ============================================================
 $developer = 'Abu Sholihin'; // mohon tidak diubah
+$company = 'Coding Albaiti Sumedang'; // mohon tidak diubah
 $versi_app = '0.1';
 $tanggal_app = '2025-10-28';
 $repo_app = 'https://github.com/incyberz/siperba';

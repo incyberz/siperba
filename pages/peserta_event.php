@@ -25,40 +25,62 @@ if (!$event) {
   exit;
 }
 
-// Jika form disubmit
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+# ============================================================
+# PROCESS PESERTA EVENT
+# ============================================================
+include 'peserta_event-process.php';
 
-  // ambil semua peserta di event ini
-  $q_peserta = mysqli_query($conn, "SELECT id FROM tb_peserta WHERE event_id=$event_id");
-  while ($p = mysqli_fetch_assoc($q_peserta)) {
-    $peserta_id = $p['id'];
-
-    // cek apakah peserta ini sudah mengumpulkan berkas
-    $cek = mysqli_query($conn, "SELECT COUNT(*) AS jml FROM tb_pengumpulan WHERE peserta_id=$peserta_id");
-    $data = mysqli_fetch_assoc($cek);
-    $sudah = intval($data['jml']);
-
-    // hanya hapus jika belum ada pengumpulan
-    if ($sudah == 0) {
-      mysqli_query($conn, "DELETE FROM tb_peserta WHERE id=$peserta_id");
-    }
-  }
-
-  if (!empty($_POST['anggota'])) {
-    foreach ($_POST['anggota'] as $user_id) {
-      $user_id = mysqli_real_escape_string($conn, $user_id);
-      mysqli_query($conn, "INSERT INTO tb_peserta (event_id, user_id) VALUES ($event_id, '$user_id')");
-    }
-  }
+# ============================================================
+# MANAGE PESERTA EVENT
+# ============================================================
+// Ambil semua anggota
+$anggota_res = mysqli_query($conn, "SELECT * FROM tb_user WHERE role='anggota' ORDER BY jabatan, nama");
+if (!mysqli_num_rows($anggota_res)) {
   echo "<script>
-    Swal.fire('Berhasil!', 'Data peserta berhasil diperbarui.', 'success')
-      .then(() => window.location='?peserta_event&event_id=$event_id');
+    Swal.fire('Error!', 'Belum ada anggota satupun.', 'error')
+      .then(() => window.location='?dashboard');
   </script>";
   exit;
 }
 
-// Ambil semua anggota
-$anggota = mysqli_query($conn, "SELECT id, username, nama, whatsapp FROM tb_user WHERE role='anggota' ORDER BY nama");
+
+$cb_jabatan = '';
+include 'tb/tb_jabatan.php';
+
+if ($tb_jabatan) {
+  $opt = '';
+  foreach ($tb_jabatan as $jabatan => $d) {
+    $opt .= "<label class='d-block'><input class='cb_jabatan' id='cd_jabatan--$jabatan' type=checkbox value='$jabatan'> $d[nama_jabatan]</label>";
+  }
+  $cb_jabatan = "
+    <div class='d-flex gap-3 mb-3'>
+      <div><i class='small text-muted'>Check by jabatan : </i></div>
+      $opt
+    </div>
+  ";
+
+?>
+  <script>
+    $(function() {
+      $('.cb_jabatan').click(function() {
+        // let tid = $(this).prop('id');
+        // let rid = tid.split('--');
+        // let aksi = rid[0];
+        // let id = rid[1];
+        let val = $(this).val();
+        let checked = $(this).prop('checked');
+        console.log(val, checked);
+        $('.cb_jabatan--' + val).prop('checked', checked);
+      })
+
+    })
+  </script>
+
+
+<?php
+}
+
+
 
 // Ambil peserta event ini
 $peserta_event = mysqli_query($conn, "SELECT 
@@ -78,6 +100,9 @@ while ($p = mysqli_fetch_assoc($peserta_event)) {
   </div>
   <div class="card-body">
     <p><strong>Event:</strong> <?= htmlspecialchars($event['nama_event']) ?></p>
+
+    <?= $cb_jabatan ?>
+
     <form method="post">
       <table class="table table-bordered table-hover align-middle">
         <thead class="table-light">
@@ -88,24 +113,29 @@ while ($p = mysqli_fetch_assoc($peserta_event)) {
             <th>Nama Anggota</th>
             <th>Username</th>
             <th>WhatsApp</th>
+            <th>Jabatan</th>
           </tr>
         </thead>
         <tbody>
           <?php
           $no = 1;
-          while ($row = mysqli_fetch_assoc($anggota)):
-            $checked = in_array($row['username'], $peserta_list) ? 'checked' : '';
+          while ($anggota = mysqli_fetch_assoc($anggota_res)):
+            $checked = in_array($anggota['username'], $peserta_list) ? 'checked' : '';
+            $jabatan = $anggota['jabatan'] ?? '<i class="small text-muted">(tanpa jabatan)</i>';
           ?>
             <tr>
               <td class="text-center">
-                <input class="checkItem" type="checkbox" name="anggota[]" value="<?= $row['id'] ?>" <?= $checked ?>>
+                <input class="checkItem cb_jabatan--<?= $anggota['jabatan'] ?>" type="checkbox" name="anggota[]" value="<?= $anggota['id'] ?>" <?= $checked ?>>
               </td>
-              <td><?= htmlspecialchars($row['nama']) ?></td>
-              <td><?= htmlspecialchars($row['username']) ?></td>
+              <td><?= htmlspecialchars($anggota['nama']) ?></td>
+              <td><?= htmlspecialchars($anggota['username']) ?></td>
               <td>
-                <a href="https://api.whatsapp.com/send?phone=<?= htmlspecialchars($row['whatsapp']) ?>" target="_blank">
-                  <?= htmlspecialchars($row['whatsapp']) ?>
+                <a href="https://api.whatsapp.com/send?phone=<?= htmlspecialchars($anggota['whatsapp']) ?>" target="_blank">
+                  <?= htmlspecialchars($anggota['whatsapp']) ?>
                 </a>
+              </td>
+              <td>
+                <?= $jabatan ?>
               </td>
             </tr>
           <?php endwhile; ?>
@@ -114,7 +144,7 @@ while ($p = mysqli_fetch_assoc($peserta_event)) {
 
       <div class="text-end mt-3">
         <button type="submit" class="btn btn-success">
-          <i class="bi bi-save"></i> Simpan Perubahan
+          <i class="bi bi-save"></i> Simpan Peserta Event
         </button>
         <a href="?dashboard" class="btn btn-secondary">
           <i class="bi bi-arrow-left"></i> Kembali
